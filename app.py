@@ -64,13 +64,29 @@ def scrape():
                 driver.execute_script("arguments[0].click();", rows[index])
                 time.sleep(3)
 
+                # Extract data from the table row
+                try:
+                    # Assuming the data is in specific columns, adjust the indices as needed
+                    row_data = rows[index].find_elements(By.TAG_NAME, "td")
+                    waqf_id = row_data[0].text.strip() if len(row_data) > 0 else "unknown"
+                    property_id = row_data[1].text.strip() if len(row_data) > 1 else "unknown"
+                    district = row_data[2].text.strip() if len(row_data) > 2 else "unknown"
+                    # state = row_data[3].text.strip() if len(row_data) > 3 else "unknown"
+                    
+                    # Create filename with extracted data
+                    filename = f"{waqf_id}_{property_id}_{district}.pdf"
+                    # Clean filename to remove any invalid characters
+                    filename = "".join(c for c in filename if c.isalnum() or c in ('_', '-', '.'))
+                except Exception as e:
+                    log_message(f"Error extracting row data: {str(e)}")
+                    filename = f"table{table_idx+1}_row{index+1}.pdf"  # Fallback to original naming
+
                 driver.switch_to.window(driver.window_handles[-1])
                 time.sleep(2)
 
                 result = driver.execute_cdp_cmd("Page.printToPDF", {"printBackground": True})
                 pdf_data = base64.b64decode(result['data'])
 
-                filename = f"table{table_idx+1}_row{index+1}.pdf"
                 with open(os.path.join(SAVE_DIR, filename), "wb") as f:
                     f.write(pdf_data)
                 log_message(f" Saved: {filename}")
