@@ -1,13 +1,13 @@
 from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import base64, os, time, queue
 from threading import Event
 import json
-from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 scraping_event = Event()
@@ -23,10 +23,12 @@ def index():
 
 def get_chrome_options(save_location):
     options = Options()
+    options.add_argument("--headless")  # Run in headless mode
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
+    options.binary_location = "/usr/bin/google-chrome"  # Specify Chrome binary location
     
     # Set download preferences
     prefs = {
@@ -40,7 +42,7 @@ def get_chrome_options(save_location):
 
 @app.route('/scrape', methods=['POST'])
 def scrape():
-    global SAVE_DIR
+    global driver, SAVE_DIR
     scraping_event.clear()
     scraping_event.set()
     
@@ -104,7 +106,6 @@ def scrape():
                     waqf_id = row_data[0].text.strip() if len(row_data) > 0 else "unknown"
                     property_id = row_data[1].text.strip() if len(row_data) > 1 else "unknown"
                     district = row_data[2].text.strip() if len(row_data) > 2 else "unknown"
-                    # state = row_data[3].text.strip() if len(row_data) > 3 else "unknown"
                     
                     # Create filename with extracted data
                     filename = f"{waqf_id}_{property_id}_{district}.pdf"
@@ -138,8 +139,9 @@ def scrape():
         return jsonify({"message": f" Error: {str(e)}"}), 500
 
     finally:
-        driver.quit()
-        log_message("Browser closed")
+        if driver:
+            driver.quit()
+            log_message("Browser closed")
 
 def log_message(message):
     log_queue.put(message)
