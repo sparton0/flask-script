@@ -23,12 +23,12 @@ def index():
 
 def get_chrome_options(save_location):
     options = Options()
-    options.add_argument("--headless")  # Run in headless mode
+    options.add_argument("--headless=new")  # Updated headless mode syntax
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--window-size=1920,1080")
-    options.binary_location = "/usr/bin/google-chrome"  # Specify Chrome binary location
+    options.add_argument("--remote-debugging-port=9222")
     
     # Set download preferences
     prefs = {
@@ -76,9 +76,11 @@ def scrape():
         return jsonify({"message": f"Error creating save directory: {str(e)}"}), 400
 
     try:
-        service = Service(ChromeDriverManager().install())
+        log_message("Initializing Chrome driver...")
+        service = Service()
         driver = webdriver.Chrome(service=service, options=get_chrome_options(save_dir))
         wait = WebDriverWait(driver, 10)
+        log_message("Chrome driver initialized successfully")
 
         driver.get(login_url)
         log_message("Opened login page")
